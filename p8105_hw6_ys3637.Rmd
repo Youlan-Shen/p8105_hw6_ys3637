@@ -1,0 +1,50 @@
+---
+title: "p8105_hw6_ys3637"
+author: "Youlan Shen"
+date: "2022-12-03"
+output: github_document
+---
+
+## Set up
+
+```{r}
+# library all packages that we need at the beginning
+library(tidyverse)
+
+set.seed(1)
+
+# default set up
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+## Problem 2
+
+First loads, tidies, and clean the data.
+
+Create a city_state variable, omit 4 cities, and limit race to White and Black
+
+```{r}
+# read in data from CSV file
+homicide_data <- read_csv("Data/homicide-data.csv")
+# show the first several lines of the original data
+homicide_data
+# Create a city_state variable, omit 4 cities, and limit race to White and Black
+homicide_data <- homicide_data %>% 
+  janitor::clean_names() %>% 
+  mutate(city_state = str_c(city, ", ", state),
+         victim_age = as.numeric(victim_age)) %>% 
+  filter(!city_state %in% c("Dallas, TX", "Phoenix, AZ", "Kansas City, MO", "Tulsa, AL")) %>% 
+  filter(victim_race %in% c("White","Black"))
+# show the first several lines of the cleaned data
+homicide_data
+```
+
+
