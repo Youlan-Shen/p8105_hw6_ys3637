@@ -242,7 +242,13 @@ cv_df %>%
     values_to = "rmse",
     names_prefix = "rmse_") %>% 
   mutate(model = fct_inorder(model)) %>% 
-  ggplot(aes(x = model, y = rmse)) + geom_violin()
+  ggplot(aes(x = model, y = rmse)) + 
+  geom_violin() +
+  labs(
+    title = "Prediction Errors For 3 Models Under CV",
+    x = "Models",
+    y = "Prediction Errors"
+  ) 
 ```
 
 From the plot, I can conclude that regardign to prediction error, model 3 is the best, since it has the lowest RMSEs. The speads of RMSEs in three models are different, model 1 has lower RMSE compared to model 2. So, if we only look at the prediction error, I could conclude that the model 3: bwt ~ bhead * blength * babysex is the best. In the meantiem, model 3 does not have lots of predictors, so it is a great model here.
