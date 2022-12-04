@@ -10,6 +10,8 @@ output: github_document
 ```{r}
 # library all packages that we need at the beginning
 library(tidyverse)
+library(modelr)
+library(mgcv)
 
 set.seed(1)
 
@@ -151,10 +153,12 @@ There is no missing value for each column.
 
 Propose a regression model for birthweight.
 
-I will limit to variables that I think have lower colinearity, and are significant, and use step function with backwards direction to generate a model.
+I will limit to variables that I think have lower colinearity, and are significant, and use step function with backwards direction to generate a model. 
 
 Model 1:
 bwt ~ babysex + blength + gaweeks + malform + momage + mrace + smoken + wtgain
+
+I exclude bhead (which I think is related to blength), delwt, fincome, mheighth, ppbmi, ppwt (which I think is related to wtgain), frace, menarche, parity, pnumlbw, pnumgsa (which I think is less important here).
 
 ```{r}
 m <- lm(bwt ~ babysex + blength + gaweeks + malform + momage + mrace + smoken + wtgain, data = birthweight_data)
@@ -173,10 +177,11 @@ m1 %>%
 
 After the step function with backwards direction, I generate a final model with 7 variables.
 
-Final Model 1:
+* Final Model 1:
 bwt ~ babysex + blength + gaweeks + momage + mrace + smoken + wtgain
 
 Then, show a plot of model residuals against fitted values.
+
 ```{r}
 birthweight_data %>% 
   modelr::add_residuals(m1) %>% 
@@ -190,3 +195,54 @@ birthweight_data %>%
   ) 
 ```
 
+Using crossv_mc to compare the model 1 with other two models.
+
+* Model 2 :
+bwt ~ blength + gaweeks
+
+* Model 3:
+bwt ~ bhead * blength * babysex
+
+First generate the CV dataframe.
+```{r}
+# select usable variables from the birthweight_data
+birthweight <- birthweight_data %>% 
+  select(bwt, babysex, bhead, blength, gaweeks, momage, mrace, smoken, wtgain)
+# generate a cv dataframe at the beginning
+cv_df =
+  crossv_mc(birthweight, 30) %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble))
+```
+
+Then fit 3 models to the generated CV dataframe.
+
+```{r}
+cv_df <-
+  cv_df %>% 
+  mutate(
+    model_1  = map(train, ~lm(bwt ~ babysex + blength + gaweeks + momage + mrace + smoken + wtgain, data = .x)),
+    model_2     = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+    model_3 = map(train, ~lm(bwt ~ bhead * blength * babysex, data = .x))) %>% 
+  mutate(
+    rmse_1 = map2_dbl(model_1, test, ~rmse(model = .x, data = .y)),
+    rmse_2    = map2_dbl(model_2, test, ~rmse(model = .x, data = .y)),
+    rmse_3 = map2_dbl(model_3, test, ~rmse(model = .x, data = .y)))
+```
+
+In the end, to plot the prediction error for 3 models.
+
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+
+From the plot, I can conclude that regardign to prediction error, model 3 is the best, since it has the lowest RMSEs. The speads of RMSEs in three models are similar, and model 1 has lower RMSE compared to model 2. So, if we only look at the prediction error, I could conclude that the model 3: bwt ~ bhead * blength * babysex is the best. In the meantiem, model 3 does not have lots of predictors, so it is a great model here.
